@@ -1,13 +1,12 @@
 module.exports = {
-  "parserOptions": {
-    // Required for certain syntax usages
-    "ecmaVersion": 2017
+  env: {
+    es6: true,
+    node: true,
   },
-  "plugins": [
-    "promise"
-  ],
-  "extends": "eslint:recommended",
-  "rules": {
+  extends: ["eslint:recommended"],
+
+  plugins: ["promise"],
+  rules: {
     // Removed rule "disallow the use of console" from recommended eslint rules
     "no-console": "off",
 
@@ -36,7 +35,7 @@ module.exports = {
     "array-callback-return": 1,
 
     // Requre the use of === and !==
-    "eqeqeq": 2,
+    eqeqeq: 2,
 
     // Disallow the use of alert, confirm, and prompt
     "no-alert": 2,
@@ -56,7 +55,7 @@ module.exports = {
     // Warn against unnecessary calls to .bind()
     "no-extra-bind": 1,
 
-    // Warn against unnecessary labels    
+    // Warn against unnecessary labels
     "no-extra-label": 1,
 
     // Disallow leading or trailing decimal points in numeric literals
@@ -117,6 +116,9 @@ module.exports = {
     "promise/catch-or-return": 2,
 
     // Warn against nested then() or catch() statements
-    "promise/no-nesting": 1
-  }
-}
+    "promise/no-nesting": 1,
+  },
+  parserOptions: {
+    ecmaVersion: 8, // or 2017
+  },
+};

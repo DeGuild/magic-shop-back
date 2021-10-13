@@ -21,11 +21,7 @@ admin.initializeApp();
 const express = require("express");
 //  const cookieParser = require('cookie-parser')();
 const cors = require("cors")({ origin: true });
-const app = express();
-
-// The Firebase Admin SDK to access Firestore.
-const admin = require("firebase-admin");
-admin.initializeApp();
+const shop = express();
 
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -164,12 +160,12 @@ const allMagicShops = async (req, res) => {
   });
 };
 
-app.use(cors);
-app.post("/addMagicScroll", addMagicScroll);
-app.get("/readMagicScroll/:address", readMagicScroll);
-app.post("/deleteMagicShop", deleteMagicShop);
-app.post("/deleteMagicScroll", deleteMagicScroll);
-app.get("/allMagicShops/:address/:direction", allMagicShops);
-app.get("/allMagicShopsOnce", allMagicShops);
+shop.use(cors);
+shop.post("/addMagicScroll", addMagicScroll);
+shop.get("/readMagicScroll/:address", readMagicScroll);
+shop.post("/deleteMagicShop", deleteMagicShop);
+shop.post("/deleteMagicScroll", deleteMagicScroll);
+shop.get("/allMagicShops/:address/:direction", allMagicShops);
+shop.get("/allMagicShopsOnce", allMagicShops);
 
-exports.app = functions.https.onRequest(app);
+exports.shop = functions.https.onRequest(shop);
