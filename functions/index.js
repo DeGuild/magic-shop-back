@@ -25,6 +25,38 @@ const shop = express();
 
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
+async function deleteQueryBatch(db, query, resolve) {
+  const snapshot = await query.get();
+
+  const batchSize = snapshot.size;
+  if (batchSize === 0) {
+    // When there are no documents left, we are done
+    resolve();
+    return;
+  }
+
+  // Delete documents in a batch
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
+
+  // Recurse on the next process tick, to avoid
+  // exploding the stack.
+  process.nextTick(() => {
+    deleteQueryBatch(db, query, resolve);
+  });
+}
+
+async function deleteCollection(db, collectionPath, batchSize) {
+  const collectionRef = db.collection(collectionPath);
+  const query = collectionRef.orderBy("__name__").limit(batchSize);
+
+  return new Promise((resolve, reject) => {
+    deleteQueryBatch(db, query, resolve).catch(reject);
+  });
+}
 
 const addMagicScroll = async (req, res) => {
   // Grab the text parameter.
@@ -32,20 +64,21 @@ const addMagicScroll = async (req, res) => {
   const tokenId = req.body.tokenId;
   const courseId = req.body.courseId;
   const description = req.body.description;
+  const name = req.body.name;
   const url = req.body.url
     ? req.body.url
     : "https://firebasestorage.googleapis.com/v0/b/deguild-2021.appspot.com/o/0.png?alt=media&token=131e4102-2ca3-4bf0-9480-3038c45aa372";
+
+  const prerequisite = req.body.prerequisite
+    ? req.body.prerequisite
+    : "0x0000000000000000000000000000000000000000";
   // Push the new message into Firestore using the Firebase Admin SDK.
-  await admin
-    .firestore()
-    .collection("MagicShop/")
-    .doc(address)
-    .set({ address });
+
   await admin
     .firestore()
     .collection(`MagicShop/${address}/tokens`)
     .doc(tokenId)
-    .set({ url, tokenId, courseId, description });
+    .set({ url, tokenId, courseId, description, name, prerequisite });
 
   // Send back a message that we've successfully written the message
   res.json({
@@ -55,9 +88,8 @@ const addMagicScroll = async (req, res) => {
 
 const readMagicScroll = async (req, res) => {
   // Grab the text parameter.
-  const paths = req.path.split("/");
-  const address = paths[1];
-  const tokenId = paths[2];
+  const address = req.params.address;
+  const tokenId = req.params.id;
   const readResult = await admin
     .firestore()
     .collection(`MagicShop/${address}/tokens`)
@@ -65,13 +97,13 @@ const readMagicScroll = async (req, res) => {
     .get();
   // Send back a message that we've successfully written the message
   functions.logger.log(readResult);
-
-  try {
-    res.json({
-      imageUrl: `${readResult.data().url}`,
-      tokenId: `${readResult.data().tokenId}`,
-    });
-  } catch (error) {
+  if (readResult.data()) {
+    try {
+      res.json(readResult.data());
+    } catch (error) {
+      res.json(error);
+    }
+  } else {
     res.json({
       message: "Magic scroll not found!",
     });
@@ -80,8 +112,8 @@ const readMagicScroll = async (req, res) => {
 
 const deleteMagicScroll = async (req, res) => {
   // Grab the text parameter.
-  const address = req.body.address;
-  const tokenId = req.body.tokenId;
+  const address = req.params.address;
+  const tokenId = req.params.tokenId;
   // Push the new message into Firestore using the Firebase Admin SDK.
   await admin
     .firestore()
@@ -97,75 +129,75 @@ const deleteMagicScroll = async (req, res) => {
 
 const deleteMagicShop = async (req, res) => {
   // Grab the text parameter.
-  const address = req.body.address;
+  const address = req.params.address;
   // Push the new message into Firestore using the Firebase Admin SDK.
-  await admin.firestore().collection("MagicShop/").doc(address).delete();
-
+  // await admin.firestore().collection(`MagicShop/${address}/tokens`);
+  await deleteCollection(
+    admin.firestore(),
+    `MagicShop/${address}/tokens`,
+    9999
+  );
+  await admin.firestore().collection(`MagicShop`).doc(address).delete();
   // Send back a message that we've successfully written the message
   res.json({
     result: "Successful",
+    removed: address,
   });
 };
 
-const allMagicShops = async (req, res) => {
+const allMagicScrolls = async (req, res) => {
   // Grab the text parameter.
-  const lastItem = req.path;
-  const paths = req.path.split("/");
-  const address = paths[1];
-  const direction = paths[2];
+  const address = req.params.address;
+  const tokenId = req.params.tokenId;
+  const direction = req.params.direction;
 
   let data = [];
-  if (lastItem.length > 1) {
-    const paths = lastItem.split("/");
-    if (direction === "next") {
-      const startAtSnapshot = admin
-        .firestore()
-        .collection("MagicShop/")
-        .orderBy("address", "asc")
-        .startAfter(address);
+  if (direction === "next") {
+    const startAtSnapshot = admin
+      .firestore()
+      .collection(`MagicShop/${address}/tokens`)
+      .orderBy("tokenId", "asc")
+      .startAfter(tokenId);
 
-      const items = await startAtSnapshot.limit(8).get();
-      items.forEach((doc) => {
-        data.push(doc.id);
-      });
-    } else if (paths[2] === "previous") {
-      const startAtSnapshot = admin
-        .firestore()
-        .collection("MagicShop/")
-        .orderBy("address", "desc")
-        .startAfter(address);
+    const items = await startAtSnapshot.limit(24).get();
+    items.forEach((doc) => {
+      data.push(doc.data());
+    });
+  } else if (direction === "previous") {
+    const startAtSnapshot = admin
+      .firestore()
+      .collection(`MagicShop/${address}/tokens`)
+      .orderBy("tokenId", "desc")
+      .startAfter(tokenId);
 
-      const items = await startAtSnapshot.limit(8).get();
-      items.forEach((doc) => {
-        data.push(doc.id);
-      });
-    }
+    const items = await startAtSnapshot.limit(24).get();
+    items.forEach((doc) => {
+      data.push(doc.data());
+    });
   } else {
     const readResult = await admin
       .firestore()
-      .collection("MagicShop/")
-      .orderBy("address", "asc")
-      .limit(8)
+      .collection(`MagicShop/${address}/tokens`)
+      .orderBy("tokenId", "asc")
+      .limit(24)
       .get();
     // Send back a message that we've successfully written the message3
     readResult.forEach((doc) => {
-      data.push(doc.id);
+      data.push(doc.data());
     });
     // readResult.map
     functions.logger.log(readResult);
   }
 
-  res.json({
-    result: data.sort(),
-  });
+  res.json(data.sort());
 };
 
 shop.use(cors);
 shop.post("/addMagicScroll", addMagicScroll);
-shop.get("/readMagicScroll/:address", readMagicScroll);
-shop.post("/deleteMagicShop", deleteMagicShop);
-shop.post("/deleteMagicScroll", deleteMagicScroll);
-shop.get("/allMagicShops/:address/:direction", allMagicShops);
-shop.get("/allMagicShopsOnce", allMagicShops);
+shop.get("/readMagicScroll/:address/:id", readMagicScroll);
+shop.post("/deleteMagicShop/:address", deleteMagicShop);
+shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
+shop.get("/allMagicScrolls/:address/:direction/:tokenId", allMagicScrolls);
+shop.get("/allMagicScrolls/:address", allMagicScrolls);
 
 exports.shop = functions.https.onRequest(shop);
