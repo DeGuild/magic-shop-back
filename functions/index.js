@@ -145,9 +145,10 @@ const deleteMagicShop = async (req, res) => {
   });
 };
 
-const allMagicShops = async (req, res) => {
+const allMagicScrolls = async (req, res) => {
   // Grab the text parameter.
   const address = req.params.address;
+  const tokenId = req.params.tokenId;
   const direction = req.params.direction;
 
   let data = [];
@@ -156,22 +157,22 @@ const allMagicShops = async (req, res) => {
       .firestore()
       .collection(`MagicShop/${address}/tokens`)
       .orderBy("tokenId", "asc")
-      .startAfter(address);
+      .startAfter(tokenId);
 
     const items = await startAtSnapshot.limit(24).get();
     items.forEach((doc) => {
-      data.push(doc.id);
+      data.push(doc.data());
     });
   } else if (direction === "previous") {
     const startAtSnapshot = admin
       .firestore()
       .collection(`MagicShop/${address}/tokens`)
-      .orderBy("tokenId", "asc")
-      .startAfter(address);
+      .orderBy("tokenId", "desc")
+      .startAfter(tokenId);
 
     const items = await startAtSnapshot.limit(24).get();
     items.forEach((doc) => {
-      data.push(doc.id);
+      data.push(doc.data());
     });
   } else {
     const readResult = await admin
@@ -182,15 +183,13 @@ const allMagicShops = async (req, res) => {
       .get();
     // Send back a message that we've successfully written the message3
     readResult.forEach((doc) => {
-      data.push(doc.id);
+      data.push(doc.data());
     });
     // readResult.map
     functions.logger.log(readResult);
   }
 
-  res.json({
-    result: data.sort(),
-  });
+  res.json(data.sort());
 };
 
 shop.use(cors);
@@ -198,7 +197,7 @@ shop.post("/addMagicScroll", addMagicScroll);
 shop.get("/readMagicScroll/:address/:id", readMagicScroll);
 shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
-shop.get("/allMagicScrolls/:address/:direction", allMagicShops);
-shop.get("/allMagicScrolls/:address", allMagicShops);
+shop.get("/allMagicScrolls/:address/:direction/:tokenId", allMagicScrolls);
+shop.get("/allMagicScrolls/:address", allMagicScrolls);
 
 exports.shop = functions.https.onRequest(shop);
