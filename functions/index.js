@@ -148,7 +148,7 @@ const deleteMagicShop = async (req, res) => {
 const allMagicScrolls = async (req, res) => {
   // Grab the text parameter.
   const address = req.params.address;
-  const tokenId = req.params.tokenId;
+  const tokenId = parseInt(req.params.tokenId, 10);
   const direction = req.params.direction;
 
   let data = [];
