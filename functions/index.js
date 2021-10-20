@@ -78,7 +78,7 @@ const addMagicScroll = async (req, res) => {
     .firestore()
     .collection(`MagicShop/${address}/tokens`)
     .doc(tokenId)
-    .set({ url, tokenId, courseId, description, name, prerequisite });
+    .set({ url, tokenId: parseInt(tokenId, 10), courseId, description, name, prerequisite });
 
   // Send back a message that we've successfully written the message
   res.json({
