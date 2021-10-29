@@ -23,6 +23,35 @@ const express = require("express");
 const cors = require("cors")({ origin: true });
 const shop = express();
 
+
+const validateWeb3Token = async (req, res, next) => {
+  if (!req.headers.authorization) {
+    functions.logger.error(
+      "No web token was passed in the Authorization header."
+    );
+    res.status(403).send("Unauthorized");
+    return;
+  }
+
+  const token = req.headers.authorization;
+
+  try {
+    const { address, body } = await Web3Token.verify(token);
+    if (
+      address === "0xAe488A5e940868bFFA6D59d9CDDb92Da11bb2cD9" ||
+      address === "0x785867278139c1cA73bF1e978461c8028061aDf6" ||
+      req.originalUrl === "/test"
+    ) {
+      next();
+      return;
+    }
+  } catch (error) {
+    functions.logger.error("Error while verifying Firebase ID token:", error);
+  }
+  res.status(403).send("Unauthorized");
+  return;
+};
+
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
 async function deleteQueryBatch(db, query, resolve) {
@@ -145,59 +174,10 @@ const deleteMagicShop = async (req, res) => {
   });
 };
 
-const allMagicScrolls = async (req, res) => {
-  // Grab the text parameter.
-  const address = req.params.address;
-  const tokenId = parseInt(req.params.tokenId, 10);
-  const direction = req.params.direction;
-
-  let data = [];
-  if (direction === "next") {
-    const startAtSnapshot = admin
-      .firestore()
-      .collection(`MagicShop/${address}/tokens`)
-      .orderBy("tokenId", "asc")
-      .startAfter(tokenId);
-
-    const items = await startAtSnapshot.limit(24).get();
-    items.forEach((doc) => {
-      data.push(doc.data());
-    });
-  } else if (direction === "previous") {
-    const startAtSnapshot = admin
-      .firestore()
-      .collection(`MagicShop/${address}/tokens`)
-      .orderBy("tokenId", "desc")
-      .startAfter(tokenId);
-
-    const items = await startAtSnapshot.limit(24).get();
-    items.forEach((doc) => {
-      data.push(doc.data());
-    });
-  } else {
-    const readResult = await admin
-      .firestore()
-      .collection(`MagicShop/${address}/tokens`)
-      .orderBy("tokenId", "asc")
-      .limit(24)
-      .get();
-    // Send back a message that we've successfully written the message3
-    readResult.forEach((doc) => {
-      data.push(doc.data());
-    });
-    // readResult.map
-    functions.logger.log(readResult);
-  }
-
-  res.json(data.sort());
-};
-
 shop.use(cors);
+shop.use(validateWeb3Token);
 shop.post("/addMagicScroll", addMagicScroll);
-shop.get("/readMagicScroll/:address/:id", readMagicScroll);
 shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
-shop.get("/allMagicScrolls/:address/:direction/:tokenId", allMagicScrolls);
-shop.get("/allMagicScrolls/:address", allMagicScrolls);
 
 exports.shop = functions.https.onRequest(shop);
