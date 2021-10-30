@@ -23,7 +23,6 @@ const express = require("express");
 const cors = require("cors")({ origin: true });
 const shop = express();
 
-
 const validateWeb3Token = async (req, res, next) => {
   if (!req.headers.authorization) {
     functions.logger.error(
@@ -39,8 +38,7 @@ const validateWeb3Token = async (req, res, next) => {
     const { address, body } = await Web3Token.verify(token);
     if (
       address === "0xAe488A5e940868bFFA6D59d9CDDb92Da11bb2cD9" ||
-      address === "0x785867278139c1cA73bF1e978461c8028061aDf6" ||
-      req.originalUrl === "/test"
+      address === "0x785867278139c1cA73bF1e978461c8028061aDf6"
     ) {
       next();
       return;
@@ -107,36 +105,19 @@ const addMagicScroll = async (req, res) => {
     .firestore()
     .collection(`MagicShop/${address}/tokens`)
     .doc(tokenId)
-    .set({ url, tokenId: parseInt(tokenId, 10), courseId, description, name, prerequisite });
+    .set({
+      url,
+      tokenId: parseInt(tokenId, 10),
+      courseId,
+      description,
+      name,
+      prerequisite,
+    });
 
   // Send back a message that we've successfully written the message
   res.json({
     result: "Successful",
   });
-};
-
-const readMagicScroll = async (req, res) => {
-  // Grab the text parameter.
-  const address = req.params.address;
-  const tokenId = req.params.id;
-  const readResult = await admin
-    .firestore()
-    .collection(`MagicShop/${address}/tokens`)
-    .doc(tokenId)
-    .get();
-  // Send back a message that we've successfully written the message
-  functions.logger.log(readResult);
-  if (readResult.data()) {
-    try {
-      res.json(readResult.data());
-    } catch (error) {
-      res.json(error);
-    }
-  } else {
-    res.json({
-      message: "Magic scroll not found!",
-    });
-  }
 };
 
 const deleteMagicScroll = async (req, res) => {
@@ -175,7 +156,7 @@ const deleteMagicShop = async (req, res) => {
 };
 
 shop.use(cors);
-shop.use(validateWeb3Token);
+// shop.use(validateWeb3Token);
 shop.post("/addMagicScroll", addMagicScroll);
 shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
