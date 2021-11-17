@@ -34,6 +34,7 @@ const validateWeb3Token = async (req, res, next) => {
 
   const token = req.headers.authorization;
 
+  // TODO: Validate whether the token sent is the owner of the contract
   try {
     const { address, body } = await Web3Token.verify(token);
     if (
@@ -88,7 +89,7 @@ async function deleteCollection(db, collectionPath, batchSize) {
 const addMagicScroll = async (req, res) => {
   // Grab the text parameter.
   const address = req.body.address;
-  const tokenId = req.body.tokenId;
+  const tokenId = parseInt(req.params.tokenId, 10);
   const courseId = req.body.courseId;
   const description = req.body.description;
   const name = req.body.name;
@@ -107,7 +108,7 @@ const addMagicScroll = async (req, res) => {
     .doc(tokenId)
     .set({
       url,
-      tokenId: parseInt(tokenId, 10),
+      tokenId,
       courseId,
       description,
       name,
