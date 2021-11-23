@@ -23,6 +23,12 @@ const express = require("express");
 const cors = require("cors")({ origin: true });
 const shop = express();
 
+const ownableABI = require("./contracts/IMagicScrollsPlus.json").abi;
+const msABI = require("./contracts/IMagicScrollsPlus.json").abi;
+
+const Web3Token = require("web3-token");
+const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
+
 const validateWeb3Token = async (req, res, next) => {
   if (!req.headers.authorization) {
     functions.logger.error(
@@ -38,8 +44,7 @@ const validateWeb3Token = async (req, res, next) => {
   try {
     const { address, body } = await Web3Token.verify(token);
     if (
-      address === "0xAe488A5e940868bFFA6D59d9CDDb92Da11bb2cD9" ||
-      address === "0x785867278139c1cA73bF1e978461c8028061aDf6"
+      address
     ) {
       next();
       return;
@@ -88,7 +93,8 @@ async function deleteCollection(db, collectionPath, batchSize) {
 
 const addMagicScroll = async (req, res) => {
   // Grab the text parameter.
-  const address = req.body.address;
+  
+  const addressShop = req.body.address;
   const tokenId = parseInt(req.params.tokenId, 10);
   const courseId = req.body.courseId;
   const description = req.body.description;
@@ -101,10 +107,22 @@ const addMagicScroll = async (req, res) => {
     ? req.body.prerequisite
     : "0x0000000000000000000000000000000000000000";
   // Push the new message into Firestore using the Firebase Admin SDK.
+  const web3 = createAlchemyWeb3(functions.config().web3.api);
+
+  const token = req.headers.authorization;
+  const { address, body } = await Web3Token.verify(token);
+  const userAddress = web3.utils.toChecksumAddress(address);
+
+  const ownable = new web3.eth.Contract(ownableABI, addressShop);
+  const ownerOfShop = await ownable.methods.owner().call()
+
+  if(userAddress === ownerOfShop){
+    res.status(403).send("Unauthorized");
+  }
 
   await admin
     .firestore()
-    .collection(`MagicShop/${address}/tokens`)
+    .collection(`MagicShop/${addressShop}/tokens`)
     .doc(tokenId)
     .set({
       url,
@@ -123,12 +141,25 @@ const addMagicScroll = async (req, res) => {
 
 const deleteMagicScroll = async (req, res) => {
   // Grab the text parameter.
-  const address = req.params.address;
+  const addressShop = req.params.address;
   const tokenId = req.params.tokenId;
+
+  const web3 = createAlchemyWeb3(functions.config().web3.api);
+
+  const token = req.headers.authorization;
+  const { address, body } = await Web3Token.verify(token);
+  const userAddress = web3.utils.toChecksumAddress(address);
+
+  const ownable = new web3.eth.Contract(ownableABI, addressShop);
+  const ownerOfShop = await ownable.methods.owner().call()
+
+  if(userAddress === ownerOfShop){
+    res.status(403).send("Unauthorized");
+  }
   // Push the new message into Firestore using the Firebase Admin SDK.
   await admin
     .firestore()
-    .collection(`MagicShop/${address}/tokens`)
+    .collection(`MagicShop/${addressShop}/tokens`)
     .doc(tokenId)
     .delete();
 
@@ -140,24 +171,36 @@ const deleteMagicScroll = async (req, res) => {
 
 const deleteMagicShop = async (req, res) => {
   // Grab the text parameter.
-  const address = req.params.address;
+  const addressShop = req.params.address;
+  const web3 = createAlchemyWeb3(functions.config().web3.api);
+
+  const token = req.headers.authorization;
+  const { address, body } = await Web3Token.verify(token);
+  const userAddress = web3.utils.toChecksumAddress(address);
+
+  const ownable = new web3.eth.Contract(ownableABI, addressShop);
+  const ownerOfShop = await ownable.methods.owner().call()
+
+  if(userAddress === ownerOfShop){
+    res.status(403).send("Unauthorized");
+  }
   // Push the new message into Firestore using the Firebase Admin SDK.
   // await admin.firestore().collection(`MagicShop/${address}/tokens`);
   await deleteCollection(
     admin.firestore(),
-    `MagicShop/${address}/tokens`,
+    `MagicShop/${addressShop}/tokens`,
     9999
   );
-  await admin.firestore().collection(`MagicShop`).doc(address).delete();
+  await admin.firestore().collection(`MagicShop`).doc(addressShop).delete();
   // Send back a message that we've successfully written the message
   res.json({
     result: "Successful",
-    removed: address,
+    removed: addressShop,
   });
 };
 
 shop.use(cors);
-// shop.use(validateWeb3Token);
+shop.use(validateWeb3Token);
 shop.post("/addMagicScroll", addMagicScroll);
 shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
