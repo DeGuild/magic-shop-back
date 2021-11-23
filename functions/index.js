@@ -114,6 +114,7 @@ const addMagicScroll = async (req, res) => {
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
   const ownerOfShop = await ownable.methods.owner().call()
+  functions.logger.log(userAddress,ownerOfShop);
 
   if(userAddress === ownerOfShop){
     res.status(403).send("Unauthorized");
@@ -122,7 +123,7 @@ const addMagicScroll = async (req, res) => {
   await admin
     .firestore()
     .collection(`MagicShop/${addressShop}/tokens`)
-    .doc(tokenId)
+    .doc(req.body.tokenId)
     .set({
       url,
       tokenId,
