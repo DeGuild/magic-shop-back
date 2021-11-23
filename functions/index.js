@@ -23,7 +23,7 @@ const express = require("express");
 const cors = require("cors")({ origin: true });
 const shop = express();
 
-const ownableABI = require("./contracts/IMagicScrollsPlus.json").abi;
+const ownableABI = require("./contracts/Ownable.json").abi;
 const msABI = require("./contracts/IMagicScrollsPlus.json").abi;
 
 const Web3Token = require("web3-token");
@@ -40,7 +40,6 @@ const validateWeb3Token = async (req, res, next) => {
 
   const token = req.headers.authorization;
 
-  // TODO: Validate whether the token sent is the owner of the contract
   try {
     const { address, body } = await Web3Token.verify(token);
     if (
@@ -92,6 +91,54 @@ async function deleteCollection(db, collectionPath, batchSize) {
 }
 
 const addMagicScroll = async (req, res) => {
+  // Grab the text parameter.
+  
+  const addressShop = req.body.address;
+  const tokenId = parseInt(req.params.tokenId, 10);
+  const courseId = req.body.courseId;
+  const description = req.body.description;
+  const name = req.body.name;
+  const url = req.body.url
+    ? req.body.url
+    : "https://firebasestorage.googleapis.com/v0/b/deguild-2021.appspot.com/o/0.png?alt=media&token=131e4102-2ca3-4bf0-9480-3038c45aa372";
+
+  const prerequisite = req.body.prerequisite
+    ? req.body.prerequisite
+    : "0x0000000000000000000000000000000000000000";
+  // Push the new message into Firestore using the Firebase Admin SDK.
+  const web3 = createAlchemyWeb3(functions.config().web3.api);
+
+  const token = req.headers.authorization;
+  const { address, body } = await Web3Token.verify(token);
+  const userAddress = web3.utils.toChecksumAddress(address);
+
+  const ownable = new web3.eth.Contract(ownableABI, addressShop);
+  const ownerOfShop = await ownable.methods.owner().call()
+
+  if(userAddress === ownerOfShop){
+    res.status(403).send("Unauthorized");
+  }
+
+  await admin
+    .firestore()
+    .collection(`MagicShop/${addressShop}/tokens`)
+    .doc(tokenId)
+    .set({
+      url,
+      tokenId,
+      courseId,
+      description,
+      name,
+      prerequisite,
+    });
+
+  // Send back a message that we've successfully written the message
+  res.json({
+    result: "Successful",
+  });
+};
+
+const getMagicScrollsCsv = async (req, res) => {
   // Grab the text parameter.
   
   const addressShop = req.body.address;
@@ -204,5 +251,6 @@ shop.use(validateWeb3Token);
 shop.post("/addMagicScroll", addMagicScroll);
 shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
+shop.get("/csv/:address/:tokenId", getMagicScrollsCsv);
 
 exports.shop = functions.https.onRequest(shop);
