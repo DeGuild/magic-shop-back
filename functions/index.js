@@ -116,10 +116,10 @@ const addMagicScroll = async (req, res) => {
   const ownerOfShop = await ownable.methods.owner().call()
   functions.logger.log(userAddress,ownerOfShop);
 
-  if(userAddress === ownerOfShop){
+  if(userAddress !== ownerOfShop){
     res.status(403).send("Unauthorized");
+    return;
   }
-
   await admin
     .firestore()
     .collection(`MagicShop/${addressShop}/tokens`)
@@ -164,8 +164,9 @@ const getMagicScrollsCsv = async (req, res) => {
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
   const ownerOfShop = await ownable.methods.owner().call()
 
-  if(userAddress === ownerOfShop){
+  if(userAddress !== ownerOfShop){
     res.status(403).send("Unauthorized");
+    return;
   }
 
   await admin
@@ -201,8 +202,9 @@ const deleteMagicScroll = async (req, res) => {
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
   const ownerOfShop = await ownable.methods.owner().call()
 
-  if(userAddress === ownerOfShop){
+  if(userAddress !== ownerOfShop){
     res.status(403).send("Unauthorized");
+    return;
   }
   // Push the new message into Firestore using the Firebase Admin SDK.
   await admin
@@ -229,8 +231,9 @@ const deleteMagicShop = async (req, res) => {
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
   const ownerOfShop = await ownable.methods.owner().call()
 
-  if(userAddress === ownerOfShop){
+  if(userAddress !== ownerOfShop){
     res.status(403).send("Unauthorized");
+    return;
   }
   // Push the new message into Firestore using the Firebase Admin SDK.
   // await admin.firestore().collection(`MagicShop/${address}/tokens`);
