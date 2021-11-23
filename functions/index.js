@@ -94,7 +94,7 @@ const addMagicScroll = async (req, res) => {
   // Grab the text parameter.
   
   const addressShop = req.body.address;
-  const tokenId = parseInt(req.params.tokenId, 10);
+  const tokenId = parseInt(req.body.tokenId, 10);
   const courseId = req.body.courseId;
   const description = req.body.description;
   const name = req.body.name;
