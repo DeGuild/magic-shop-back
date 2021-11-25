@@ -203,7 +203,7 @@ const getRound = async (req, res) => {
     .firestore()
     .collection(`MagicShop/${addressShop}/rounds`)
     .where("addressCertificate", "==", addressCertificate)
-    .where("certificateToken", "==", parseInt(certificateToken,10))
+    .where("certificateToken", "==", parseInt(certificateToken, 10))
     .get();
   if (!readResult2) {
     res
@@ -248,23 +248,29 @@ const getMagicScrollsCsv = async (req, res) => {
     toBlock: "latest",
   });
 
-  const jsonForCsv = Promise.all(consumed.map(async (event) => {
-    const magicShop = new web3.eth.Contract(MagicScrollsPlusABI, addressShop);
-    const owner = await magicShop.methods
-      .ownerOf(event.returnValues.scrollId)
-      .call();
-    const info = await magicShop.methods
-      .scrollInfo(event.returnValues.scrollId)
-      .call();
-    if (info[1] === scrollType) {
+  const jsonForCsv = Promise.all(
+    consumed.map(async (event) => {
+      const magicShop = new web3.eth.Contract(MagicScrollsPlusABI, addressShop);
+      const owner = await magicShop.methods
+        .ownerOf(event.returnValues.scrollId)
+        .call();
+      const info = await magicShop.methods
+        .scrollInfo(event.returnValues.scrollId)
+        .call();
+      if (info[1] === scrollType) {
+        return {
+          address: owner,
+          tokenId: event.returnValues.scrollId,
+          status: false,
+        };
+      }
       return {
-        address: owner,
-        tokenId: event.returnValues.scrollId,
-        status: false,
+        address: null,
+        tokenId: null,
+        status: null,
       };
-    }
-    return {};
-  }));
+    })
+  );
   const fields = ["address", "tokenId", "status"];
   const opts = { fields };
 
@@ -354,6 +360,6 @@ shop.post("/round", addRound);
 shop.get("/round/:addressM/:addressC/:tokenId", getRound);
 
 // TODO: work on these APIs
-shop.get("/csv/:address/:tokenType/:password", getMagicScrollsCsv);
+shop.get("/csv/:addressM/:tokenType/:password", getMagicScrollsCsv);
 
 exports.shop = functions.https.onRequest(shop);
