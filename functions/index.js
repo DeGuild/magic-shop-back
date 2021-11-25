@@ -29,7 +29,7 @@ const MagicScrollsPlusABI =
 
 const Web3Token = require("web3-token");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
-const { parse } = require('json2csv');
+const { parse } = require("json2csv");
 
 const validateWeb3Token = async (req, res, next) => {
   if (!req.headers.authorization) {
@@ -199,18 +199,6 @@ const getRound = async (req, res) => {
     return;
   }
 
-  const readResult = await admin
-    .firestore()
-    .collection(`MagicShop/${addressShop}/rounds`)
-    .where("addressCertificate", "==", addressCertificate)
-    .where("certificateToken", "==", certificateToken)
-    .get();
-  if (!readResult) {
-    res
-      .status(404)
-      .json({ message: `There is no round for ${addressCertificate}}` });
-    return;
-  }
   const readResult2 = await admin
     .firestore()
     .collection(`MagicShop/${addressShop}/rounds`)
@@ -223,21 +211,20 @@ const getRound = async (req, res) => {
     return;
   }
 
-  const data = [];
-  readResult.forEach((doc) => {
-    data.push(doc.data());
-  });
   const data2 = [];
   readResult2.forEach((doc) => {
     data2.push(doc.data());
   });
-  res.json({ "1where": data.sort(), "2where": data2 });
+  functions.logger.log(data2);
+
+  res.json(data2);
 };
 
 const getMagicScrollsCsv = async (req, res) => {
   // Grab the text parameter.
 
   const addressShop = req.params.addressM;
+  const scrollType = req.params.tokenType;
   const password = req.params.password;
   const web3 = createAlchemyWeb3(functions.config().web3.api);
 
@@ -260,24 +247,32 @@ const getMagicScrollsCsv = async (req, res) => {
     toBlock: "latest",
   });
 
-  const jsonForCsv = consumed.map(async (event) => {
+  const jsonForCsv = Promise.all(consumed.map(async (event) => {
     const magicShop = new web3.eth.Contract(MagicScrollsPlusABI, addressShop);
     const owner = await magicShop.methods
       .ownerOf(event.returnValues.scrollId)
       .call();
-    // const info = await magicShop.methods.scrollInfo(event.returnValues.scrollId).call();
-    return {
-      address: owner,
-      tokenId: event.returnValues.scrollId,
-      status: false,
-    };
-  });
+    const info = await magicShop.methods
+      .scrollInfo(event.returnValues.scrollId)
+      .call();
+    if (info[1] === scrollType) {
+      return {
+        address: owner,
+        tokenId: event.returnValues.scrollId,
+        status: false,
+      };
+    }
+    return {};
+  }));
   const fields = ["address", "tokenId", "status"];
   const opts = { fields };
 
   try {
     const csv = parse(jsonForCsv, opts);
-    res.setHeader("Content-disposition", `attachment; filename=${addressShop}-round-${password}.csv`);
+    res.setHeader(
+      "Content-disposition",
+      `attachment; filename=${addressShop}-round-${password}.csv`
+    );
     res.set("Content-Type", "text/csv");
     res.status(200).send(csv);
   } catch (err) {
@@ -358,6 +353,6 @@ shop.post("/round", addRound);
 shop.get("/round/:addressM/:addressC/:tokenId", getRound);
 
 // TODO: work on these APIs
-shop.get("/csv/:address/:password", getMagicScrollsCsv);
+shop.get("/csv/:address/:tokenType/:password", getMagicScrollsCsv);
 
 exports.shop = functions.https.onRequest(shop);
