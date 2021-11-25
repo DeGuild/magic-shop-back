@@ -236,6 +236,7 @@ const getMagicScrollsCsv = async (req, res) => {
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
   const ownerOfShop = await ownable.methods.owner().call();
+  const magicShop = new web3.eth.Contract(MagicScrollsPlusABI, addressShop);
 
   if (userAddress !== ownerOfShop) {
     res.status(403).send("Unauthorized");
@@ -250,7 +251,6 @@ const getMagicScrollsCsv = async (req, res) => {
 
   const jsonForCsv = Promise.all(
     consumed.map(async (event) => {
-      const magicShop = new web3.eth.Contract(MagicScrollsPlusABI, addressShop);
       const owner = await magicShop.methods
         .ownerOf(event.returnValues.scrollId)
         .call();
