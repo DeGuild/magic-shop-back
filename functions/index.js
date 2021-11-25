@@ -186,6 +186,7 @@ const getRound = async (req, res) => {
   const token = req.headers.authorization;
   const { address, body } = await Web3Token.verify(token);
   const userAddress = web3.utils.toChecksumAddress(address);
+  functions.logger.log(addressShop, addressCertificate, certificateToken);
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
   const ownerOfShop = await ownable.methods.owner().call();
@@ -200,6 +201,12 @@ const getRound = async (req, res) => {
     .where("addressCertificate", "==", addressCertificate)
     .where("certificateToken", "==", certificateToken)
     .get();
+  if (!readResult) {
+    res
+      .status(404)
+      .json({ message: `There is no round for ${addressCertificate}}` });
+    return;
+  }
 
   const data = [];
   readResult.forEach((doc) => {
@@ -326,7 +333,7 @@ shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
 
 shop.post("/round", addRound);
-shop.get("/round/:addressShop/:addressCertificate/:tokenId", getRound);
+shop.get("/round/:addressM/:addressC/:tokenId", getRound);
 
 // TODO: work on these APIs
 shop.get("/csv/:address/:tokenId", getMagicScrollsCsv);
