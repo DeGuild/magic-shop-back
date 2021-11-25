@@ -25,11 +25,11 @@ const shop = express();
 
 const ownableABI = require("./contracts/Ownable.json").abi;
 const MagicScrollsPlusABI =
-  require("functions/contracts/MagicShop/V2/IMagicScrolls+.sol/IMagicScrollsPlus.json").abi;
+  require("./contracts/MagicShop/V2/IMagicScrolls+.sol/IMagicScrollsPlus.json").abi;
 
 const Web3Token = require("web3-token");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
-const json2csv = require("json2csv").parse;
+const { parse } = require('json2csv');
 
 const validateWeb3Token = async (req, res, next) => {
   if (!req.headers.authorization) {
@@ -276,7 +276,7 @@ const getMagicScrollsCsv = async (req, res) => {
   const opts = { fields };
 
   try {
-    const csv = json2csv(jsonForCsv, opts);
+    const csv = parse(jsonForCsv, opts);
     res.setHeader("Content-disposition", `attachment; filename=${addressShop}-round-${password}.csv`);
     res.set("Content-Type", "text/csv");
     res.status(200).send(csv);
