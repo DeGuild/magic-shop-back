@@ -203,6 +203,7 @@ const getRound = async (req, res) => {
     .firestore()
     .collection(`MagicShop/${addressShop}/rounds`)
     .where("addressCertificate", "==", addressCertificate)
+    .where("certificateToken", "==", parseInt(certificateToken,10))
     .get();
   if (!readResult2) {
     res
