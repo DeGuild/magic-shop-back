@@ -252,26 +252,37 @@ const getMagicScrollsCsv = async (req, res) => {
 
   const jsonForCsv = await Promise.all(
     consumed.map(async (event) => {
-      const owner = await magicShop.methods
-        .ownerOf(event.returnValues.scrollId)
-        .call();
-      const info = await magicShop.methods
-        .scrollInfo(event.returnValues.scrollId)
-        .call();
-      if (info[1] === scrollType) {
+      let owner;
+      let info;
+      try {
+        owner = await magicShop.methods
+          .ownerOf(event.returnValues.scrollId)
+          .call();
+        info = await magicShop.methods
+          .scrollInfo(event.returnValues.scrollId)
+          .call();
+        if (info[1] === scrollType) {
+          return {
+            address: owner,
+            tokenId: event.returnValues.scrollId,
+            status: false,
+            scrollType: info[1],
+          };
+        }
         return {
-          address: owner,
-          tokenId: event.returnValues.scrollId,
-          status: false,
-          scrollType: info[1],
+          address: null,
+          tokenId: null,
+          status: null,
+          scrollType: null,
+        };
+      } catch (err) {
+        return {
+          address: null,
+          tokenId: null,
+          status: null,
+          scrollType: null,
         };
       }
-      return {
-        address: null,
-        tokenId: null,
-        status: null,
-        scrollType: null,
-      };
     })
   );
 
