@@ -24,7 +24,6 @@ const cors = require("cors")({ origin: true });
 const shop = express();
 
 const ownableABI = require("./contracts/Ownable.json").abi;
-const msABI = require("./contracts/IMagicScrollsPlus.json").abi;
 
 const Web3Token = require("web3-token");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
@@ -42,9 +41,7 @@ const validateWeb3Token = async (req, res, next) => {
 
   try {
     const { address, body } = await Web3Token.verify(token);
-    if (
-      address
-    ) {
+    if (address) {
       next();
       return;
     }
@@ -92,7 +89,7 @@ async function deleteCollection(db, collectionPath, batchSize) {
 
 const addMagicScroll = async (req, res) => {
   // Grab the text parameter.
-  
+
   const addressShop = req.body.address;
   const tokenId = parseInt(req.body.tokenId, 10);
   const courseId = req.body.courseId;
@@ -113,10 +110,10 @@ const addMagicScroll = async (req, res) => {
   const userAddress = web3.utils.toChecksumAddress(address);
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
-  const ownerOfShop = await ownable.methods.owner().call()
-  functions.logger.log(userAddress,ownerOfShop);
+  const ownerOfShop = await ownable.methods.owner().call();
+  functions.logger.log(userAddress, ownerOfShop);
 
-  if(userAddress !== ownerOfShop){
+  if (userAddress !== ownerOfShop) {
     res.status(403).send("Unauthorized");
     return;
   }
@@ -139,9 +136,81 @@ const addMagicScroll = async (req, res) => {
   });
 };
 
+const addRound = async (req, res) => {
+  // Grab the text parameter.
+
+  const addressShop = req.body.addressM;
+  const addressCertificate = req.body.addressC;
+  const certificateToken = req.body.tokenId;
+  // const tokenId = parseInt(req.params.tokenId, 10);
+  const coursePassword = req.body.coursePassword;
+  // Push the new message into Firestore using the Firebase Admin SDK.
+  const web3 = createAlchemyWeb3(functions.config().web3.api);
+
+  const token = req.headers.authorization;
+  const { address, body } = await Web3Token.verify(token);
+  const userAddress = web3.utils.toChecksumAddress(address);
+
+  const ownable = new web3.eth.Contract(ownableABI, addressShop);
+  const ownerOfShop = await ownable.methods.owner().call();
+
+  if (userAddress !== ownerOfShop) {
+    res.status(403).send("Unauthorized");
+    return;
+  }
+
+  await admin
+    .firestore()
+    .collection(`MagicShop/${addressShop}/rounds`)
+    .doc(addressCertificate)
+    .set({
+      addressCertificate,
+      certificateToken,
+      coursePassword,
+    });
+
+  // Send back a message that we've successfully written the message
+  res.json({
+    result: "Successful",
+  });
+};
+
+const getRound = async (req, res) => {
+  // Grab the text parameter.
+  const addressShop = req.params.addressM;
+  const addressCertificate = req.params.addressC;
+  const certificateToken = req.params.tokenId;
+  // const tokenId = parseInt(req.params.tokenId, 10);
+  const web3 = createAlchemyWeb3(functions.config().web3.api);
+
+  const token = req.headers.authorization;
+  const { address, body } = await Web3Token.verify(token);
+  const userAddress = web3.utils.toChecksumAddress(address);
+
+  const ownable = new web3.eth.Contract(ownableABI, addressShop);
+  const ownerOfShop = await ownable.methods.owner().call();
+
+  if (userAddress !== ownerOfShop) {
+    res.status(403).send("Unauthorized");
+    return;
+  }
+  const readResult = await admin
+    .firestore()
+    .collection(`MagicShop/${addressShop}/rounds`)
+    .where("addressCertificate", "==", addressCertificate)
+    .where("certificateToken", "==", certificateToken)
+    .get();
+
+  const data = [];
+  readResult.forEach((doc) => {
+    data.push(doc.data());
+  });
+  res.json(data.sort());
+};
+
 const getMagicScrollsCsv = async (req, res) => {
   // Grab the text parameter.
-  
+
   const addressShop = req.body.address;
   const tokenId = parseInt(req.params.tokenId, 10);
   const courseId = req.body.courseId;
@@ -162,9 +231,9 @@ const getMagicScrollsCsv = async (req, res) => {
   const userAddress = web3.utils.toChecksumAddress(address);
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
-  const ownerOfShop = await ownable.methods.owner().call()
+  const ownerOfShop = await ownable.methods.owner().call();
 
-  if(userAddress !== ownerOfShop){
+  if (userAddress !== ownerOfShop) {
     res.status(403).send("Unauthorized");
     return;
   }
@@ -200,9 +269,9 @@ const deleteMagicScroll = async (req, res) => {
   const userAddress = web3.utils.toChecksumAddress(address);
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
-  const ownerOfShop = await ownable.methods.owner().call()
+  const ownerOfShop = await ownable.methods.owner().call();
 
-  if(userAddress !== ownerOfShop){
+  if (userAddress !== ownerOfShop) {
     res.status(403).send("Unauthorized");
     return;
   }
@@ -229,9 +298,9 @@ const deleteMagicShop = async (req, res) => {
   const userAddress = web3.utils.toChecksumAddress(address);
 
   const ownable = new web3.eth.Contract(ownableABI, addressShop);
-  const ownerOfShop = await ownable.methods.owner().call()
+  const ownerOfShop = await ownable.methods.owner().call();
 
-  if(userAddress !== ownerOfShop){
+  if (userAddress !== ownerOfShop) {
     res.status(403).send("Unauthorized");
     return;
   }
@@ -255,6 +324,11 @@ shop.use(validateWeb3Token);
 shop.post("/addMagicScroll", addMagicScroll);
 shop.post("/deleteMagicShop/:address", deleteMagicShop);
 shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
+
+shop.post("/round", addRound);
+shop.get("/round/:addressShop/:addressCertificate/:tokenId", getRound);
+
+// TODO: work on these APIs
 shop.get("/csv/:address/:tokenId", getMagicScrollsCsv);
 
 exports.shop = functions.https.onRequest(shop);
