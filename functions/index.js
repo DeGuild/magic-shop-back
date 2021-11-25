@@ -248,8 +248,9 @@ const getMagicScrollsCsv = async (req, res) => {
     fromBlock: 0,
     toBlock: "latest",
   });
+  functions.logger.log(consumed);
 
-  const jsonForCsv = Promise.all(
+  const jsonForCsv = await Promise.all(
     consumed.map(async (event) => {
       const owner = await magicShop.methods
         .ownerOf(event.returnValues.scrollId)
@@ -262,24 +263,25 @@ const getMagicScrollsCsv = async (req, res) => {
           address: owner,
           tokenId: event.returnValues.scrollId,
           status: false,
+          scrollType: info[1],
         };
       }
       return {
         address: null,
         tokenId: null,
         status: null,
+        scrollType: null,
       };
     })
   );
-  const fields = ["address", "tokenId", "status"];
+
+  functions.logger.log(jsonForCsv);
+
+  const fields = ["address", "tokenId", "scrollType", "status"];
   const opts = { fields };
 
   try {
     const csv = parse(jsonForCsv, opts);
-    res.setHeader(
-      "Content-disposition",
-      `attachment; filename=${addressShop}-round-${password}.csv`
-    );
     res.set("Content-Type", "text/csv");
     res.status(200).send(csv);
   } catch (err) {
