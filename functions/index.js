@@ -372,7 +372,6 @@ shop.post("/deleteMagicScroll/:address/:tokenId", deleteMagicScroll);
 shop.post("/round", addRound);
 shop.get("/round/:addressM/:addressC/:tokenId", getRound);
 
-// TODO: work on these APIs
 shop.get("/csv/:addressM/:tokenType/:password", getMagicScrollsCsv);
 
 exports.shop = functions.https.onRequest(shop);
