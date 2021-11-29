@@ -164,8 +164,8 @@ const addRound = async (req, res) => {
 
   await admin
     .firestore()
-    .collection(`MagicShop/${addressShop}/rounds`)
-    .doc(addressCertificate)
+    .collection(`MagicShop/${addressShop}/rounds/${addressCertificate}/tokens/${certificateToken}/passwords`)
+    .doc(coursePassword)
     .set({
       addressCertificate,
       certificateToken,
@@ -201,7 +201,7 @@ const getRound = async (req, res) => {
 
   const readResult2 = await admin
     .firestore()
-    .collection(`MagicShop/${addressShop}/rounds`)
+    .collection(`MagicShop/${addressShop}/rounds/${addressCertificate}/tokens/${certificateToken}/passwords`)
     .where("addressCertificate", "==", addressCertificate)
     .where("certificateToken", "==", parseInt(certificateToken, 10))
     .get();
