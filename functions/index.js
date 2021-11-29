@@ -166,7 +166,7 @@ const addRound = async (req, res) => {
     .firestore()
     .collection(`MagicShop/${addressShop}/rounds/${addressCertificate}/tokens/${certificateToken}/passwords`)
     .doc(coursePassword)
-    .add({
+    .set({
       addressCertificate,
       certificateToken,
       coursePassword,
