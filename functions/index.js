@@ -1,25 +1,9 @@
-/**
- * Copyright 2016 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 "use strict";
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
 const express = require("express");
-//  const cookieParser = require('cookie-parser')();
 const cors = require("cors")({ origin: true });
 const shop = express();
 
@@ -31,6 +15,9 @@ const Web3Token = require("web3-token");
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 const { parse } = require("json2csv");
 
+/**
+ * @dev function to check the token attached from the request, rejecting any request with no Web3 token attached
+ */
 const validateWeb3Token = async (req, res, next) => {
   if (!req.headers.authorization) {
     functions.logger.error(
@@ -55,8 +42,9 @@ const validateWeb3Token = async (req, res, next) => {
   return;
 };
 
-// Create and Deploy Your First Cloud Functions
-// https://firebase.google.com/docs/functions/write-firebase-functions
+/**
+ * @dev function to help deleting collection in Firestore. It is a helper function.
+ */
 async function deleteQueryBatch(db, query, resolve) {
   const snapshot = await query.get();
 
@@ -81,6 +69,9 @@ async function deleteQueryBatch(db, query, resolve) {
   });
 }
 
+/**
+ * @dev function to delete collection in Firestore. It is a helper function.
+ */
 async function deleteCollection(db, collectionPath, batchSize) {
   const collectionRef = db.collection(collectionPath);
   const query = collectionRef.orderBy("__name__").limit(batchSize);
@@ -90,9 +81,11 @@ async function deleteCollection(db, collectionPath, batchSize) {
   });
 }
 
+/**
+ * @dev function to add Magic Scroll to the database, but can only proceed if the sender is the owner
+ */
 const addMagicScroll = async (req, res) => {
   // Grab the text parameter.
-
   const addressShop = req.body.address;
   const tokenId = parseInt(req.body.tokenId, 10);
   const courseId = req.body.courseId;
@@ -105,7 +98,6 @@ const addMagicScroll = async (req, res) => {
   const prerequisite = req.body.prerequisite
     ? req.body.prerequisite
     : "0x0000000000000000000000000000000000000000";
-  // Push the new message into Firestore using the Firebase Admin SDK.
   const web3 = createAlchemyWeb3(functions.config().web3.api);
 
   const token = req.headers.authorization;
@@ -139,15 +131,16 @@ const addMagicScroll = async (req, res) => {
   });
 };
 
+/**
+ * @dev function to add Examination round to the database, but can only proceed if the sender is the owner
+ */
 const addRound = async (req, res) => {
   // Grab the text parameter.
 
   const addressShop = req.body.addressM;
   const addressCertificate = req.body.addressC;
   const certificateToken = req.body.tokenId;
-  // const tokenId = parseInt(req.params.tokenId, 10);
   const coursePassword = req.body.coursePassword;
-  // Push the new message into Firestore using the Firebase Admin SDK.
   const web3 = createAlchemyWeb3(functions.config().web3.api);
 
   const token = req.headers.authorization;
@@ -178,12 +171,14 @@ const addRound = async (req, res) => {
   });
 };
 
+/**
+ * @dev function to get Examination rounds from the database, but can only proceed if the sender is the owner
+ */
 const getRound = async (req, res) => {
   // Grab the text parameter.
   const addressShop = req.params.addressM;
   const addressCertificate = req.params.addressC;
   const certificateToken = req.params.tokenId;
-  // const tokenId = parseInt(req.params.tokenId, 10);
   const web3 = createAlchemyWeb3(functions.config().web3.api);
 
   const token = req.headers.authorization;
@@ -199,6 +194,7 @@ const getRound = async (req, res) => {
     return;
   }
 
+  //getting passwords
   const readResult2 = await admin
     .firestore()
     .collection(`MagicShop/${addressShop}/rounds/${addressCertificate}/tokens/${certificateToken}/passwords`)
@@ -212,6 +208,7 @@ const getRound = async (req, res) => {
     return;
   }
 
+  //extract data out of the read result from Firestore
   const data2 = [];
   readResult2.forEach((doc) => {
     data2.push(doc.data());
@@ -221,6 +218,9 @@ const getRound = async (req, res) => {
   res.json(data2);
 };
 
+/**
+ * @dev function to get examinees from the database in the form of CSV, but can only proceed if the sender is the owner
+ */
 const getMagicScrollsCsv = async (req, res) => {
   // Grab the text parameter.
 
@@ -301,6 +301,9 @@ const getMagicScrollsCsv = async (req, res) => {
   }
 };
 
+/**
+ * @dev function to delete a magic scroll, but can only proceed if the sender is the owner
+ */
 const deleteMagicScroll = async (req, res) => {
   // Grab the text parameter.
   const addressShop = req.params.address;
@@ -332,6 +335,9 @@ const deleteMagicScroll = async (req, res) => {
   });
 };
 
+/**
+ * @dev function to delete a magic shop, but can only proceed if the sender is the owner
+ */
 const deleteMagicShop = async (req, res) => {
   // Grab the text parameter.
   const addressShop = req.params.address;
@@ -348,8 +354,6 @@ const deleteMagicShop = async (req, res) => {
     res.status(403).send("Unauthorized");
     return;
   }
-  // Push the new message into Firestore using the Firebase Admin SDK.
-  // await admin.firestore().collection(`MagicShop/${address}/tokens`);
   await deleteCollection(
     admin.firestore(),
     `MagicShop/${addressShop}/tokens`,
